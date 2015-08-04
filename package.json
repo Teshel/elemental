@@ -1,0 +1,13 @@
+{
+  "name": "Elemental",
+  "version": "0.0.1",
+  "main": "src/entry.js",
+  "scripts": {
+    "dev": "webpack-dev-server --devtool eval --progress --colors --content-base build"
+  },
+  "author": "Joseph Michaels",
+  "dependencies": {
+    "jquery": "^2.1.4",
+    "underscore": "^1.8.3"
+  }
+}
