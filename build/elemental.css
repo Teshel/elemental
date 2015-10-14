@@ -29,6 +29,11 @@ html, body {
     background-color: #c78284;
 }
 
+.postTransition {
+    border: none;
+    background-color: #86cbb7;
+}
+
 .actinoids {
     border: none;
     background-color: #c892b7;
@@ -37,6 +42,21 @@ html, body {
 .lanthanoids {
     border: none;
     background-color: #ed9373;
+}
+
+.metalloids {
+    border: none;
+    background-color: #67cd73;
+}
+
+.otherNonmetals {
+    border: none;
+    background-color: #2ef620;
+}
+
+.halogens {
+    border: none;
+    background-color: #2cdfb7;
 }
 
 .poorMetals {
