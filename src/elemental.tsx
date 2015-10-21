@@ -5,6 +5,10 @@
 ///<reference path="typings/underscore/underscore.d.ts" />
 import $ = require("jquery");
 import _ = require("underscore");
+import ReactDOM = require("react-dom");
+import React = require("react");
+import {ElementListItem} from './view/elementListItem';
+import {SolutionList} from './view/solutionList';
 
 export class Point {
     x: number;
@@ -16,12 +20,25 @@ export class Point {
     }
 }
 
+export class ElementTableView extends React.Component<any, any> {
+    render() {
+        return (
+                <div className='elementTableIcon noselect {this.props.group}'>
+                    <div className='abbr'>{this.props.abbr}</div>
+                </div>
+        );
+    }
+}
+
 export class Element {
     abbr: string;
     name: string;
     num: number;
     group: string;
     location: Point;
+    iconDiv: JQuery;
+    tableView: JQuery;
+    listView: React.ReactElement<any>;
 
     constructor(abbr: string, data: any[]) {
         this.abbr = abbr;
@@ -33,6 +50,22 @@ export class Element {
         } else {
             this.location = new Point(0, 0);
         }
+
+        this.listView = <ElementListItem group='{this.group}' abbr='{this.abbr}'/>;
+        this.iconDiv = $('<div/>')
+            .addClass("elementIcon")
+            .addClass(this.group)
+            .append(createClassDiv("abbr", this.abbr))
+            .addClass("noselect");
+
+        this.tableView = $('<div/>')
+            .addClass("elementTableIcon")
+            .addClass(this.group)
+            .addClass("noselect");
+    }
+
+    highlight() {
+        this.iconDiv.children().first().addClass('highlight');
     }
 
     toDiv(): JQuery {
@@ -45,9 +78,17 @@ export class Element {
     }
 
     toIconDiv(): JQuery {
+        return this.iconDiv.clone();
+    }
+
+    toTableDiv(): JQuery {
         return $('<div/>')
-            .addClass("elementIcon")
+            .addClass("elementTableIcon")
             .addClass(this.group)
+            .addClass("noselect")
+            .css("left", "calc(" + (this.location.x * 1.8).toString() + "em + " + (this.location.x * 5) + "px)")
+            .css("top", "calc(" + (this.location.y * 1.8).toString() + "em + "+ (this.location.y * 5) + "px)")
+            .css("position", "absolute")
             .append(createClassDiv("abbr", this.abbr));
     }
 }
@@ -58,32 +99,36 @@ export class App {
     searchButton: JQuery;
     table: Table;
     max: number;
+    solutions: Element[][];
 
     constructor() {
         this.resultsBox = $('#results-box');
         this.inputString = $('#periodic-input-string');
-
         this.searchButton = $('#periodic-search-button');
         //this.inputString.val('foo');
 
         this.max = 0;
 
+
         this.searchButton.click((e: Event) => {
-            console.log(this.inputString);
-            var solutions = this.matchSentence(this.inputString.val());
+            //console.log(this.inputString);
+            this.solutions = this.matchSentence(this.inputString.val());
+            //var solutions = this.matchSentence(this.inputString.val());
             this.resultsBox.html('');
-            if (solutions.length > 0) {
-                solutions.forEach((solution: Element[]) => {
-                    console.log("Outer loop");
-                    var solutionDiv = createSolutionDiv();
-                    solution.forEach((element: Element) => {
-                        //console.log(element.name);
-                        solutionDiv.append(element.toIconDiv());
-                    });
-                    //Periodic.ResultsBox.appendChild(document.createElement('br'));
-                    this.resultsBox.append(solutionDiv);
-                    //resultsBox.add
-                });
+            if (this.solutions.length > 0) {
+
+                // solutions.forEach((solution: Element[]) => {
+                //     console.log("Outer loop");
+                //     var solutionDiv = createSolutionDiv();
+                //     solution.forEach((element: Element) => {
+                //         //console.log(element.name);
+                //         //solutionDiv.append(element.toIconDiv());
+                //
+                //     });
+                //     //Periodic.ResultsBox.appendChild(document.createElement('br'));
+                //     this.resultsBox.append(solutionDiv);
+                //     //resultsBox.add
+                // });
             } else {
                 this.resultsBox.html("No possible element combination found.");
             }
@@ -105,15 +150,26 @@ export class App {
             }
             this.table[k.toLowerCase()] = new Element(k, data[k]);
         }
+
+        this.renderTable();
     }
 
     renderTable() {
-        var table = $('<div/>').addClass("mainTable");
-
+        //var table = $('<div/>').addClass("periodic-table");
+        var ptable: JQuery = $('#periodic-table');
+        //ptable.add("<p />").html("foo");
+        //table.html("foo");
+        var max = 0;
         for (var k in this.table) {
+            if (this.table[k].location.x > max) {
+                max = this.table[k].location.x;
+            }
             this.table[k].location.x;
             this.table[k].location.y;
+            ptable.append(this.table[k].toTableDiv()[0]);
         }
+        max++;
+        ptable.width((max * 1.4) + "em");
     }
 
     matchSentence(sentence: string): Element[][] {
@@ -166,6 +222,15 @@ function createSolutionDiv(): JQuery {
 export function start() {
     //console.log($('#periodic-input-string'));
     var app: App = new App();
+
+    // setup view
+    ReactDOM.render((
+
+        <div className='search-box'>
+            
+        </div>
+    ), document.body);
+
     //console.log(app.inputString);
     app.makeTable({
         "H":  ["Hydrogen",        1, "default",          [0,0]],

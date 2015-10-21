@@ -1,9 +1,12 @@
-/**
- * Created by jmichaels on 7/22/15.
- */
-///<reference path="typings/jquery/jquery.d.ts" />
-///<reference path="typings/underscore/underscore.d.ts" />
+var __extends = (this && this.__extends) || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+};
 var $ = require("jquery");
+var ReactDOM = require("react-dom");
+var React = require("react");
+var elementListItem_1 = require('./view/elementListItem');
 var Point = (function () {
     function Point(x, y) {
         this.x = x;
@@ -12,6 +15,17 @@ var Point = (function () {
     return Point;
 })();
 exports.Point = Point;
+var ElementTableView = (function (_super) {
+    __extends(ElementTableView, _super);
+    function ElementTableView() {
+        _super.apply(this, arguments);
+    }
+    ElementTableView.prototype.render = function () {
+        return (React.createElement("div", {"className": 'elementTableIcon noselect {this.props.group}'}, React.createElement("div", {"className": 'abbr'}, this.props.abbr)));
+    };
+    return ElementTableView;
+})(React.Component);
+exports.ElementTableView = ElementTableView;
 var Element = (function () {
     function Element(abbr, data) {
         this.abbr = abbr;
@@ -24,12 +38,38 @@ var Element = (function () {
         else {
             this.location = new Point(0, 0);
         }
+        this.listView = React.createElement(elementListItem_1.ElementListItem, {"group": '{this.group}', "abbr": '{this.abbr}'});
+        this.iconDiv = $('<div/>')
+            .addClass("elementIcon")
+            .addClass(this.group)
+            .append(createClassDiv("abbr", this.abbr))
+            .addClass("noselect");
+        this.tableView = $('<div/>')
+            .addClass("elementTableIcon")
+            .addClass(this.group)
+            .addClass("noselect");
     }
+    Element.prototype.highlight = function () {
+        this.iconDiv.children().first().addClass('highlight');
+    };
     Element.prototype.toDiv = function () {
-        return $('<div/>').addClass("element").addClass(this.group).append(createClassDiv("number", this.num.toString()), createClassDiv("abbr", this.abbr), createClassDiv("name", this.name));
+        return $('<div/>')
+            .addClass("element")
+            .addClass(this.group)
+            .append(createClassDiv("number", this.num.toString()), createClassDiv("abbr", this.abbr), createClassDiv("name", this.name));
     };
     Element.prototype.toIconDiv = function () {
-        return $('<div/>').addClass("elementIcon").addClass(this.group).append(createClassDiv("abbr", this.abbr));
+        return this.iconDiv.clone();
+    };
+    Element.prototype.toTableDiv = function () {
+        return $('<div/>')
+            .addClass("elementTableIcon")
+            .addClass(this.group)
+            .addClass("noselect")
+            .css("left", "calc(" + (this.location.x * 1.8).toString() + "em + " + (this.location.x * 5) + "px)")
+            .css("top", "calc(" + (this.location.y * 1.8).toString() + "em + " + (this.location.y * 5) + "px)")
+            .css("position", "absolute")
+            .append(createClassDiv("abbr", this.abbr));
     };
     return Element;
 })();
@@ -40,24 +80,11 @@ var App = (function () {
         this.resultsBox = $('#results-box');
         this.inputString = $('#periodic-input-string');
         this.searchButton = $('#periodic-search-button');
-        //this.inputString.val('foo');
         this.max = 0;
         this.searchButton.click(function (e) {
-            console.log(_this.inputString);
-            var solutions = _this.matchSentence(_this.inputString.val());
+            _this.solutions = _this.matchSentence(_this.inputString.val());
             _this.resultsBox.html('');
-            if (solutions.length > 0) {
-                solutions.forEach(function (solution) {
-                    console.log("Outer loop");
-                    var solutionDiv = createSolutionDiv();
-                    solution.forEach(function (element) {
-                        //console.log(element.name);
-                        solutionDiv.append(element.toIconDiv());
-                    });
-                    //Periodic.ResultsBox.appendChild(document.createElement('br'));
-                    _this.resultsBox.append(solutionDiv);
-                    //resultsBox.add
-                });
+            if (_this.solutions.length > 0) {
             }
             else {
                 _this.resultsBox.html("No possible element combination found.");
@@ -70,7 +97,6 @@ var App = (function () {
         });
     }
     App.prototype.makeTable = function (data) {
-        //var table: Table = {};
         this.table = {};
         for (var k in data) {
             if (this.max < k.length) {
@@ -78,13 +104,21 @@ var App = (function () {
             }
             this.table[k.toLowerCase()] = new Element(k, data[k]);
         }
+        this.renderTable();
     };
     App.prototype.renderTable = function () {
-        var table = $('<div/>').addClass("mainTable");
+        var ptable = $('#periodic-table');
+        var max = 0;
         for (var k in this.table) {
+            if (this.table[k].location.x > max) {
+                max = this.table[k].location.x;
+            }
             this.table[k].location.x;
             this.table[k].location.y;
+            ptable.append(this.table[k].toTableDiv()[0]);
         }
+        max++;
+        ptable.width((max * 1.4) + "em");
     };
     App.prototype.matchSentence = function (sentence) {
         return this.matchWordRec([], sentence.replace(/[^a-zA-Z ]/g, "").toLowerCase());
@@ -92,17 +126,13 @@ var App = (function () {
     App.prototype.matchWordRec = function (elements, input) {
         var word = input.trim();
         if (word != undefined && word.length > 0) {
-            // strategy: search through each substring (1..maxwordlength)
-            // at each recursive call, solutions represents an
-            // array of possible solutions
             var solutions = [];
             for (var i = 1; (i <= this.max && i <= word.length); i++) {
                 var curmatch = this.table[word.substring(0, i)];
                 console.log('substring: ' + word.substring(0, i) + '; full string: ' + word);
                 if (curmatch != undefined) {
-                    // matchWordRec (this function) returns an array of solutions
-                    // which are each an array of Element objects
-                    this.matchWordRec(elements.concat(curmatch), word.substring(i, word.length)).forEach(function (solution) {
+                    this.matchWordRec(elements.concat(curmatch), word.substring(i, word.length))
+                        .forEach(function (solution) {
                         solutions.push(solution);
                     });
                 }
@@ -110,9 +140,6 @@ var App = (function () {
             return solutions;
         }
         else {
-            // if the input string (word) is undefined or empty, that means
-            // we ran out of input to match and elements contains a successful path
-            // put inside an array to maintain the invariant for solutions
             return [elements];
         }
     };
@@ -120,15 +147,18 @@ var App = (function () {
 })();
 exports.App = App;
 function createClassDiv(className, content) {
-    return $('<div/>').addClass(className).text(content);
+    return $('<div/>')
+        .addClass(className)
+        .text(content);
 }
 function createSolutionDiv() {
-    return $('<div/>').addClass("solution").append($('<div/>').addClass("header").text("Solution"));
+    return $('<div/>')
+        .addClass("solution")
+        .append($('<div/>').addClass("header").text("Solution"));
 }
 function start() {
-    //console.log($('#periodic-input-string'));
     var app = new App();
-    //console.log(app.inputString);
+    ReactDOM.render((React.createElement("div", {"className": 'search-box'})), document.body);
     app.makeTable({
         "H": ["Hydrogen", 1, "default", [0, 0]],
         "He": ["Helium", 2, "noble", [17, 0]],
@@ -247,4 +277,3 @@ function start() {
     });
 }
 exports.start = start;
-//# sourceMappingURL=elemental.js.map
